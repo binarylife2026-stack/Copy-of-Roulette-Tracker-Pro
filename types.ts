@@ -15,3 +15,15 @@ export interface Stats {
 }
 
 export type NumberStatus = 'default' | 'repeated' | 'missing' | 'selected';
+
+export interface BetRound {
+  wagered: number;
+  won: number;
+  win: boolean;
+  prevBalance: number;
+  prevUnit: number;
+  prevConsecutiveLosses: number;
+  targets: string[];
+  actualNumber: string;
+}
+

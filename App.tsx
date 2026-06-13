@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { WheelMode, Stats } from './types';
+import { WheelMode, Stats, BetRound } from './types';
 import { 
   ALL_NUMBERS_EU, 
   ALL_NUMBERS_US,
@@ -16,6 +16,7 @@ import NumberCell from './components/NumberCell';
 import StatsPanel from './components/StatsPanel';
 import Racetrack from './components/Racetrack';
 import BankrollPanel from './components/BankrollPanel';
+import SessionSummaryOverlay from './components/SessionSummaryOverlay';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<WheelMode>('EU');
@@ -29,6 +30,7 @@ const App: React.FC = () => {
   const [currentUnit, setCurrentUnit] = useState<number>(1);
   const [consecutiveLosses, setConsecutiveLosses] = useState<number>(0);
   const [baseChipValue, setBaseChipValue] = useState<number>(5);
+  const [betHistory, setBetHistory] = useState<BetRound[]>([]);
 
   const currentGridNumbers = useMemo(() => mode === 'EU' ? ALL_NUMBERS_EU : ALL_NUMBERS_US, [mode]);
 
@@ -99,6 +101,10 @@ const App: React.FC = () => {
       const perNumberBet = baseChipValue * currentUnit;
       const totalBetAmount = perNumberBet * 7; // Changed from 5 to 7 for 7 target numbers
       
+      const prevBal = balance;
+      const prevUnitVal = currentUnit;
+      const prevLosses = consecutiveLosses;
+
       if (isWin) {
         // Payout: 35 to 1. One number hit out of 7.
         // Return = perNumberBet * 36 (35 profit + 1 stake)
@@ -118,6 +124,17 @@ const App: React.FC = () => {
           return next;
         });
       }
+
+      setBetHistory(prev => [...prev, {
+        wagered: totalBetAmount,
+        won: isWin ? perNumberBet * 36 : 0,
+        win: isWin,
+        prevBalance: prevBal,
+        prevUnit: prevUnitVal,
+        prevConsecutiveLosses: prevLosses,
+        targets: [...aiRecommendation.targets],
+        actualNumber: num
+      }]);
     }
 
     setHistory(prev => {
@@ -126,7 +143,7 @@ const App: React.FC = () => {
     });
     setSelectedNumber(null);
     setAutoBetNeighbors([]);
-  }, [aiRecommendation, currentUnit, baseChipValue]);
+  }, [aiRecommendation, currentUnit, baseChipValue, balance, consecutiveLosses]);
 
   const handleUndo = useCallback(() => {
     setHistory(prev => {
@@ -135,6 +152,14 @@ const App: React.FC = () => {
     });
     setSelectedNumber(null);
     setAutoBetNeighbors([]);
+    setBetHistory(prev => {
+      if (prev.length === 0) return prev;
+      const lastBet = prev[prev.length - 1];
+      setBalance(lastBet.prevBalance);
+      setCurrentUnit(lastBet.prevUnit);
+      setConsecutiveLosses(lastBet.prevConsecutiveLosses);
+      return prev.slice(0, -1);
+    });
   }, []);
 
   const handleCellClick = useCallback((num: string) => {
@@ -161,8 +186,16 @@ const App: React.FC = () => {
       setCurrentUnit(1);
       setConsecutiveLosses(0);
       setBaseChipValue(5);
+      setBetHistory([]);
     }
   };
+
+  const clearStatsOnly = useCallback(() => {
+    setBetHistory([]);
+    setBalance(0);
+    setCurrentUnit(1);
+    setConsecutiveLosses(0);
+  }, []);
 
   return (
     <div className="max-w-6xl mx-auto p-3 sm:p-6 lg:p-10 animate-in">
@@ -349,6 +382,13 @@ const App: React.FC = () => {
            <p className="text-[8px] sm:text-[9px] text-slate-800 font-black uppercase tracking-widest opacity-40">Dynamic Probability Mapping Engine</p>
         </div>
       </div>
+
+      {/* Session Summary Floating Overlay */}
+      <SessionSummaryOverlay 
+        betHistory={betHistory} 
+        balance={balance} 
+        onClearStats={clearStatsOnly} 
+      />
 
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { height: 4px; width: 4px; }
