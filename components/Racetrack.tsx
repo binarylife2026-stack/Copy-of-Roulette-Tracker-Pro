@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { WheelMode, Stats } from '../types';
 import { EU_WHEEL_ORDER, US_WHEEL_ORDER, RED_NUMBERS, EU_RACETRACK } from '../constants';
 
@@ -24,67 +24,69 @@ const Racetrack: React.FC<RacetrackProps> = ({
 }) => {
   const wheelOrder = mode === 'EU' ? EU_WHEEL_ORDER : US_WHEEL_ORDER;
   const lastHit = history[history.length - 1];
+  const [clickedNum, setClickedNum] = useState<string | null>(null);
 
-  // SVG Ellipse Layout Parameters - matching image proportions
-  const width = 800;
-  const height = 360;
-  const rx = 350;
-  const ry = 140;
+  // SVG Layout Parameters tuned to match the reference image's spacious, flat oval look
+  const width = 1000;
+  const height = 480;
+  const rx = 420; // Horizontal radius
+  const ry = 190; // Vertical radius - creates the professional flat look
   const cx = width / 2;
   const cy = height / 2;
+  const chipRadius = 18; // Precise sizing to prevent any overlap while remaining legible
 
-  // Sector highlighting logic
+  const handleInternalClick = (num: string) => {
+    setClickedNum(num);
+    onNumberClick(num);
+    setTimeout(() => setClickedNum(null), 400);
+  };
+
   const sectorNumbers = aiSector ? (EU_RACETRACK as any)[aiSector] || [] : [];
 
   return (
-    <div className="w-full bg-[#0b0e14] rounded-[2rem] border-2 border-slate-800/40 p-6 sm:p-10 mb-8 relative shadow-2xl overflow-hidden">
-      {/* Header matching image style */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 px-2 gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]" />
-          <h3 className="text-[10px] sm:text-[13px] font-black text-slate-400 uppercase tracking-[0.4em]">
-            {mode === 'EU' ? 'European' : 'American'} Racetrack
-          </h3>
+    <div className="w-full bg-[#05070a] rounded-[3rem] border border-slate-800/30 p-8 sm:p-12 mb-10 relative shadow-[0_40px_120px_rgba(0,0,0,0.9)] overflow-hidden">
+      {/* Dynamic Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 px-6 gap-6 relative z-10">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center justify-center">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.8)]" />
+          </div>
+          <div>
+            <h3 className="text-xs sm:text-[14px] font-[1000] text-slate-300 uppercase tracking-[0.4em]">
+              {mode === 'EU' ? 'European' : 'American'} Racetrack
+            </h3>
+            <div className="h-[1px] w-12 bg-emerald-500/30 mt-1" />
+          </div>
         </div>
         
-        <div className="flex gap-5 text-[9px] sm:text-[11px] font-black uppercase tracking-widest">
-          <div className="flex items-center gap-2 text-slate-500">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#4ade80] shadow-[0_0_8px_rgba(74,222,128,0.5)]" /> 
-            <span>AI Target</span>
+        <div className="flex gap-8 text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-slate-500">
+          <div className="flex items-center gap-2 group cursor-default">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#4ade80] shadow-[0_0_10px_rgba(74,222,128,0.5)] group-hover:scale-125 transition-transform" /> 
+            <span className="group-hover:text-emerald-400 transition-colors">AI Prediction</span>
           </div>
-          <div className="flex items-center gap-2 text-slate-500">
-            <div className="w-2.5 h-2.5 rounded-full bg-blue-500" /> 
+          <div className="flex items-center gap-2 group cursor-default">
+            <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)] group-hover:scale-125 transition-transform" /> 
             <span>Selection</span>
           </div>
         </div>
       </div>
 
-      <div className="relative aspect-[2.2/1] w-full max-w-5xl mx-auto flex items-center justify-center">
+      <div className="relative w-full mx-auto flex items-center justify-center">
         <svg 
           viewBox={`0 0 ${width} ${height}`} 
-          className="w-full h-full drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-visible"
+          className="w-full h-auto drop-shadow-[0_25px_50px_rgba(0,0,0,0.7)] overflow-visible"
         >
-          {/* Main Track Glow */}
+          {/* Main Track Path (Subtle background path) */}
           <ellipse 
-            cx={cx} 
-            cy={cy} 
-            rx={rx} 
-            ry={ry} 
-            fill="none" 
-            stroke="#1a1c24" 
-            strokeWidth="54" 
+            cx={cx} cy={cy} rx={rx} ry={ry} 
+            fill="none" stroke="#12151c" strokeWidth="58" className="opacity-80"
           />
           <ellipse 
-            cx={cx} 
-            cy={cy} 
-            rx={rx} 
-            ry={ry} 
-            fill="none" 
-            stroke="#111318" 
-            strokeWidth="48" 
+            cx={cx} cy={cy} rx={rx} ry={ry} 
+            fill="none" stroke="#0a0d14" strokeWidth="50" 
           />
 
-          {/* AI Sector Glow Background */}
+          {/* AI Sector Background Highlight */}
           {aiSector && wheelOrder.map((num, i) => {
             if (!sectorNumbers.includes(num)) return null;
             const angle = (i / wheelOrder.length) * 2 * Math.PI - Math.PI / 2;
@@ -92,11 +94,9 @@ const Racetrack: React.FC<RacetrackProps> = ({
             const y = cy + ry * Math.sin(angle);
             return (
               <circle 
-                key={`sec-bg-${num}`}
-                cx={x} 
-                cy={y} 
-                r="28" 
-                className="fill-emerald-500/10 blur-sm"
+                key={`sec-glow-${num}`}
+                cx={x} cy={y} r="28" 
+                className="fill-emerald-400/5 blur-xl animate-pulse"
               />
             );
           })}
@@ -111,88 +111,97 @@ const Racetrack: React.FC<RacetrackProps> = ({
             const isLast = num === lastHit;
             const isSelected = num === selectedNumber;
             const isSuggested = suggestedNumbers.includes(num);
+            const isAnimating = clickedNum === num;
 
-            // Chip Background Colors - Image Style
-            let chipColor = '#161922'; // Default black numbers
-            let textColor = '#94a3b8'; // Default text
+            // Colors perfectly matched to reference image
+            let chipColor = '#161922'; // Default Black/Dark Grey
+            let textColor = '#cbd5e1'; // Light Grey Text
 
             if (isZero) {
-              chipColor = '#064e3b'; // Dark green
-              textColor = '#fff';
+              chipColor = '#0b5a3e'; // Deep Emerald/Green
+              textColor = '#ffffff';
             } else if (isRed) {
-              chipColor = '#7f1d1d'; // Dark red
-              textColor = '#fff';
+              chipColor = '#520d14'; // Deep Crimson/Red
+              textColor = '#ffffff';
             }
 
-            // High Priority UI Overrides requested by user:
-            // Highlighting color is now Light Green
+            // Highlighting style - Light Green for AI Targets
             if (isSuggested) {
-              chipColor = '#4ade80'; // Light Green (Green-400)
-              textColor = '#064e3b'; // Dark text for contrast
+              chipColor = '#4ade80';
+              textColor = '#052e16';
             }
 
             return (
               <g 
                 key={`${num}-${i}`} 
-                className="cursor-pointer group transition-all duration-300"
-                onClick={() => onNumberClick(num)}
+                className="cursor-pointer outline-none transition-all duration-300"
+                onClick={() => handleInternalClick(num)}
               >
-                {/* Chip Outer Ring for Selection */}
-                {isSelected && (
+                {/* Visual Glow for targets */}
+                {isSuggested && (
                   <circle 
-                    cx={x} 
-                    cy={y} 
-                    r="24" 
-                    fill="none"
-                    stroke="#3b82f6"
-                    strokeWidth="3"
-                    className="opacity-50"
+                    cx={x} cy={y} r={chipRadius + 6} 
+                    fill="url(#targetGlow)" className="animate-pulse opacity-40"
                   />
                 )}
 
-                {/* Main Chip Circle */}
+                {/* Main Chip Geometry */}
                 <circle 
                   cx={x} 
                   cy={y} 
-                  r="19" 
+                  r={chipRadius} 
                   fill={chipColor}
                   className={`
-                    transition-all duration-500 shadow-xl
-                    ${isLast ? 'stroke-white stroke-[2px]' : isSelected ? 'stroke-blue-400 stroke-[2px]' : 'stroke-slate-900/40 stroke-[1px]'}
-                    ${isSuggested ? 'stroke-[#4ade80] stroke-[1px] shadow-[0_0_15px_rgba(74,222,128,0.4)]' : ''}
+                    transition-all duration-500 transform-gpu
+                    ${isLast ? 'stroke-white stroke-[2.5px] shadow-[0_0_20px_rgba(255,255,255,0.3)]' : isSelected ? 'stroke-blue-400 stroke-[2px]' : 'stroke-slate-900/60 stroke-[1px]'}
+                    ${isAnimating ? 'scale-125' : 'hover:scale-110'}
                   `}
+                  style={{ transformOrigin: `${x}px ${y}px` }}
                 />
 
-                {/* Number Text */}
+                {/* Precise Number Text Alignment */}
                 <text 
                   x={x} 
                   y={y} 
-                  dy="0.36em" 
+                  dominantBaseline="central"
                   textAnchor="middle" 
                   fill={textColor}
                   className={`
-                    text-[13px] font-black pointer-events-none select-none transition-all duration-300
-                    ${isLast ? 'font-bold underline' : ''}
+                    text-[14px] font-[1000] pointer-events-none select-none transition-transform duration-300 tracking-tight
+                    ${isLast ? 'underline' : ''}
+                    ${isAnimating ? 'scale-125' : ''}
                   `}
+                  style={{ transformOrigin: `${x}px ${y}px` }}
                 >
                   {num}
                 </text>
 
-                {/* Last Hit Indicator (White Arrow) */}
+                {/* Last Result Pointer */}
                 {isLast && (
-                  <path 
-                    d={`M ${x} ${y-28} L ${x-5} ${y-38} L ${x+5} ${y-38} Z`} 
-                    className="fill-white drop-shadow-md"
-                  />
+                  <g className="animate-bounce">
+                    <path 
+                      d={`M ${x} ${y-28} L ${x-5} ${y-38} L ${x+5} ${y-38} Z`} 
+                      className="fill-white drop-shadow-lg"
+                    />
+                  </g>
                 )}
               </g>
             );
           })}
+
+          {/* Gradients and Definitions */}
+          <defs>
+            <radialGradient id="targetGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#4ade80" />
+              <stop offset="100%" stopColor="#4ade80" stopOpacity="0" />
+            </radialGradient>
+          </defs>
         </svg>
       </div>
 
-      {/* Decorative inner gradient overlay to match image depth */}
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-transparent to-black/10 rounded-[2rem]" />
+      {/* Decorative Overlays to match image lighting */}
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-60 rounded-[3rem]" />
+      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-slate-700/20 to-transparent" />
     </div>
   );
 };

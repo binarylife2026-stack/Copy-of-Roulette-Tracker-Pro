@@ -14,7 +14,8 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, history, mode }) => {
   const wheel = getWheelOrder(mode);
   
   // Calculate hits per section for Last 10
-  const sectionCounts10 = history.reduce((acc, num) => {
+  const last10Spins = history.slice(-10);
+  const sectionCounts10 = last10Spins.reduce((acc, num) => {
     const sec = getRacetrackSection(num, EU_RACETRACK);
     if (sec) acc[sec] = (acc[sec] || 0) + 1;
     return acc;
@@ -32,7 +33,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, history, mode }) => {
     (b[1] > (a ? a[1] : -1)) ? b : a, null as [string, number] | null
   );
 
-  const getNeighborBets = (number: string, wheel: string[], neighbors: number = 2) => {
+  const getNeighborBets = (number: string, wheel: string[], neighbors: number = 3) => {
     const index = wheel.indexOf(number);
     if (index === -1) return [];
     const wheelLength = wheel.length;
@@ -45,9 +46,9 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, history, mode }) => {
   };
 
   const aiSuggestion = React.useMemo(() => {
-    if (history.length < 3 || !hotSection10) return null;
+    if (history.length < 10 || !hotSection10) return null;
     const sectionName = hotSection10[0];
-    const numsInSec = history.filter(n => getRacetrackSection(n, EU_RACETRACK) === sectionName);
+    const numsInSec = last10Spins.filter(n => getRacetrackSection(n, EU_RACETRACK) === sectionName);
     
     // Logic: find most frequent number in the hot section
     const countsInSec: Record<string, number> = {};
@@ -60,9 +61,9 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, history, mode }) => {
     return {
       section: sectionName,
       anchor: topNum,
-      neighbors: getNeighborBets(topNum, wheel, 2) // Returns 5 numbers
+      neighbors: getNeighborBets(topNum, wheel, 3) // Returns 7 numbers
     };
-  }, [hotSection10, history, wheel]);
+  }, [hotSection10, history, wheel, last10Spins]);
 
   // Pressure Zone logic for Missing Neighbors
   const pressureZone = React.useMemo(() => {
@@ -72,7 +73,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, history, mode }) => {
     const neighborsSet = new Set<string>();
     
     anchors.forEach(a => {
-      getNeighborBets(a, wheel, 2).forEach(n => neighborsSet.add(n));
+      getNeighborBets(a, wheel, 3).forEach(n => neighborsSet.add(n));
     });
 
     return Array.from(neighborsSet).filter(n => !history.includes(n)).slice(0, 10);
@@ -143,7 +144,7 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, history, mode }) => {
               <div className="bg-blue-900/30 p-1.5 sm:p-2 rounded-xl border border-blue-500/20 flex flex-col justify-center">
                 <p className="text-[8px] sm:text-[9px] text-blue-400 font-black uppercase mb-1 text-center">Targets</p>
                 <div className="flex flex-wrap gap-1 justify-center">
-                   {aiSuggestion.neighbors.slice(0, 5).map(n => (
+                   {aiSuggestion.neighbors.slice(0, 7).map(n => (
                      <span key={n} className={`text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded font-black ${n === aiSuggestion.anchor ? 'bg-blue-500 text-white' : 'bg-slate-900 text-blue-200/60'}`}>
                        {n}
                      </span>
@@ -152,8 +153,8 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, history, mode }) => {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-slate-600 text-[10px] sm:text-[11px] font-black italic border-2 border-dashed border-slate-800 rounded-xl py-3 sm:py-4">
-               Waiting for data...
+            <div className="flex flex-col items-center justify-center h-full text-slate-600 text-[10px] sm:text-[11px] font-black italic border-2 border-dashed border-slate-800 rounded-xl py-3 sm:py-4 px-2 text-center">
+               {history.length < 10 ? `Requires at least 10 historic spins to compute recommendations (${history.length}/10 completed)` : "Waiting for data..."}
             </div>
           )}
         </div>
@@ -163,11 +164,11 @@ const StatsPanel: React.FC<StatsPanelProps> = ({ stats, history, mode }) => {
       {mode === 'EU' && history.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div className="bg-slate-950/50 p-4 sm:p-6 rounded-2xl border border-slate-800 shadow-xl">
-            <h3 className="text-slate-500 text-[10px] sm:text-[12px] uppercase font-black tracking-widest mb-4 sm:mb-5">Racetrack Distribution (Live 10)</h3>
+            <h3 className="text-slate-500 text-[10px] sm:text-[12px] uppercase font-black tracking-widest mb-4 sm:mb-5">Racetrack Distribution (Live Trend)</h3>
             <div className="space-y-3 sm:space-y-4">
               {Object.keys(EU_RACETRACK).map(section => {
-                const count = sectionCounts10[section] || 0;
-                const percentage = Math.round((count / history.length) * 100);
+                 const count = sectionCounts10[section] || 0;
+                 const percentage = Math.round((count / Math.max(1, last10Spins.length)) * 100);
                 const isTarget = aiSuggestion?.section === section;
                 return (
                   <div key={section} className="group">

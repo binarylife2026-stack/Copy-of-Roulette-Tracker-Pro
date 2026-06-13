@@ -46,7 +46,7 @@ const App: React.FC = () => {
     return { hot, cold, isZigzag };
   }, [history, mode, currentGridNumbers]);
 
-  const getNeighborBets = useCallback((number: string, wheel: string[], neighbors: number = 2) => {
+  const getNeighborBets = useCallback((number: string, wheel: string[], neighbors: number = 3) => {
     const index = wheel.indexOf(number);
     if (index === -1) return [];
     const wheelLength = wheel.length;
@@ -58,12 +58,15 @@ const App: React.FC = () => {
     return Array.from(new Set(betNumbers));
   }, []);
 
-  // Automated AI Strategy Calculation (Targets for the NEXT spin)
+  // Automated AI Strategy Calculation (Targets for the NEXT spin based strictly on LAST 10 spins)
   const aiRecommendation = useMemo(() => {
-    if (history.length < 3) return null;
+    if (history.length < 10) return null;
     const wheel = mode === 'EU' ? EU_WHEEL_ORDER : US_WHEEL_ORDER;
     
-    const sectionCounts = history.reduce((acc, num) => {
+    // We strictly take the rolling last 10 spins for the analysis
+    const last10Spins = history.slice(-10);
+    
+    const sectionCounts = last10Spins.reduce((acc, num) => {
       const sec = getRacetrackSection(num, EU_RACETRACK);
       if (sec) acc[sec] = (acc[sec] || 0) + 1;
       return acc;
@@ -76,7 +79,7 @@ const App: React.FC = () => {
     if (!hotSectionName) return null;
 
     const sectionName = hotSectionName[0];
-    const numsInSec = history.filter(n => getRacetrackSection(n, EU_RACETRACK) === sectionName);
+    const numsInSec = last10Spins.filter(n => getRacetrackSection(n, EU_RACETRACK) === sectionName);
     const countsInSec: Record<string, number> = {};
     numsInSec.forEach(n => countsInSec[n] = (countsInSec[n] || 0) + 1);
     
@@ -85,7 +88,7 @@ const App: React.FC = () => {
 
     return {
       section: sectionName,
-      targets: getNeighborBets(topNum, wheel, 2)
+      targets: getNeighborBets(topNum, wheel, 3) // 3 neighbors on each side -> 7 numbers total
     };
   }, [history, mode, getNeighborBets]);
 
@@ -94,10 +97,10 @@ const App: React.FC = () => {
     if (aiRecommendation) {
       const isWin = aiRecommendation.targets.includes(num);
       const perNumberBet = baseChipValue * currentUnit;
-      const totalBetAmount = perNumberBet * 5; 
+      const totalBetAmount = perNumberBet * 7; // Changed from 5 to 7 for 7 target numbers
       
       if (isWin) {
-        // Payout: 35 to 1. One number hit out of 5.
+        // Payout: 35 to 1. One number hit out of 7.
         // Return = perNumberBet * 36 (35 profit + 1 stake)
         const winAmount = (perNumberBet * 36) - totalBetAmount;
         setBalance(prev => prev + winAmount);
@@ -119,7 +122,7 @@ const App: React.FC = () => {
 
     setHistory(prev => {
       const next = [...prev, num];
-      return next.slice(-10);
+      return next.slice(-30);
     });
     setSelectedNumber(null);
     setAutoBetNeighbors([]);
@@ -144,7 +147,7 @@ const App: React.FC = () => {
         setAutoBetNeighbors([]);
       } else {
         setSelectedNumber(num);
-        setAutoBetNeighbors(getNeighborBets(num, wheel, 2));
+        setAutoBetNeighbors(getNeighborBets(num, wheel, 3));
       }
     }
   }, [inputMode, handleAddSpin, selectedNumber, mode, getNeighborBets]);
@@ -208,8 +211,8 @@ const App: React.FC = () => {
             >
               Undo
             </button>
-            <span className={`text-[10px] sm:text-xs font-black px-3 py-1 rounded-full border border-slate-700 ${history.length === 10 ? 'bg-emerald-950 text-emerald-400 border-emerald-500/30' : 'bg-slate-800 text-slate-400'}`}>
-              COUNT: {history.length} / 10
+            <span className={`text-[10px] sm:text-xs font-black px-3 py-1 rounded-full border border-slate-700 ${history.length >= 30 ? 'bg-emerald-950 text-emerald-400 border-emerald-500/30' : 'bg-slate-800 text-slate-400'}`}>
+              COUNT: {history.length} / 30
             </span>
           </div>
         </div>

@@ -27,7 +27,7 @@ const BankrollPanel: React.FC<BankrollPanelProps> = ({
 }) => {
   const isProfit = balance >= 0;
   const perNumberBet = baseChipValue * currentUnit;
-  const nextBetAmount = perNumberBet * 5;
+  const nextBetAmount = perNumberBet * 7;
 
   const CHIPS = [5, 10, 20, 50, 100];
 
@@ -114,7 +114,12 @@ const BankrollPanel: React.FC<BankrollPanelProps> = ({
               </div>
             </div>
           ) : (
-            <p className="text-[10px] text-slate-600 font-black italic">Awaiting spin data...</p>
+            <p className="text-[10px] text-slate-600 font-black italic">
+              {history.length < 10 
+                ? `Requires at least 10 historic spins to compute recommendations (${history.length}/10 active)` 
+                : "Awaiting spin data..."
+              }
+            </p>
           )}
         </div>
 
@@ -133,7 +138,7 @@ const BankrollPanel: React.FC<BankrollPanelProps> = ({
             </div>
           </div>
           <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-2">
-            Stake {perNumberBet} TK x 5 targets
+            Stake {perNumberBet} TK x 7 targets
           </p>
         </div>
 
